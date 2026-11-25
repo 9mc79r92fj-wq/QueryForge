@@ -184,36 +184,27 @@ Celery Worker ← Redis（队列、版本化检索缓存、多轮会话）→ Qd
 
 原始项目 `XI0ZI123/QueryForge` 仍返回 404，未做任何推送或改写。旧密钥所在的历史提交只存在于本机原始项目，不随发布仓库外传。
 
-## 9. 部署状态：待部署（免费实例需账户持有人开户）
+## 9. 部署状态：待部署（ModelScope Docker 创空间，卡在账户实名）
 
-GitHub 侧已完成；**云主机尚未获得，因此仍没有公网地址**。原因不是代码或配置，而是所有免费云方案都要求账户持有人完成注册、实名与支付方式验证：本机没有 Oracle/AWS/腾讯云 CLI 或凭据，也没有任何 SSH 密钥或既有主机。
+GitHub 侧已完成；**公网地址仍未产生**。部署目标已改为 ModelScope Docker 创空间（国内直连、免费 CPU），但平台要求创空间所有者完成**实名认证 + 绑定阿里云账号**，且创建创空间只能在其网页控制台操作，因此这一步必须由账户持有人完成。
 
-已完成可直接执行的部署物料（本轮新增）：
+已完成的部署适配（本轮新增，127 项测试与 CI 均通过）：
 
 | 文件 | 作用 |
 |---|---|
-| `scripts/deploy_demo.sh` | 一键生成 `.env.demo`（含随机管理员令牌）、校验 Compose、构建镜像、启动并等待就绪；`--seed` 可一次性入库 20 篇演示语料 |
-| `deploy/Caddyfile` | 通过 `<公网IP>.sslip.io` 自动申请 Let's Encrypt 证书，关闭 SSE 缓冲、限制上传 21 MB、附加 HSTS 等安全头 |
-| `docs/DEPLOYMENT.md` | 新增"免费 ARM64 单机（Oracle Cloud Always Free）"整节，含 2 vCPU 参数收敛与验证清单 |
+| `deploy/ms/Dockerfile` | 单容器镜像：Python 3.11 + 依赖 + redis/supervisor + qdrant 二进制 |
+| `deploy/ms/supervisord.conf` | 同时托管 FastAPI(:7860)、Celery、Redis(127.0.0.1)、Qdrant(127.0.0.1) |
+| `deploy/ms/start.sh` | 恢复 `/mnt/workspace` 快照、把模型缓存指向持久卷、初始化 SQLite |
+| `deploy/ms/maintenance.sh` | 等待就绪 → 首次发布 20 篇语料 → 每 5 分钟一致性快照 |
+| `deploy/ms/qdrant.yaml`、`deploy/ms/dockerignore` | Qdrant 仅回环监听；创空间构建上下文白名单 |
+| `scripts/ms_bootstrap.py` | 走真实上传接口入库，写公开版本白名单文件 |
+| `app/index_snapshot.py` | 演示白名单 = 环境变量 ∪ 白名单文件（按 mtime 缓存） |
+| `tests/test_public_versions.py` | 新增 4 项测试覆盖白名单文件逻辑 |
+| `docs/MODELSCOPE.md` | 完整部署步骤、持久化与限制说明 |
 
-ARM64 可行性已按 `constraints.txt` 逐个核对 PyPI：106 个锁定包中 29 个提供 aarch64 wheel、76 个纯 Python、`jieba` 仅源码包但为纯 Python；Qdrant/Redis 官方镜像均有 arm64 版本，无需改 Dockerfile。
+剩余阻塞只有一步：**创建 Docker 创空间**（并给出创空间 Git 地址或 ModelScope 用户名）。拿到后我可以直接用本机已保存的 ModelScope Git 凭据推送代码；之后只需在创空间设置里填 `LLM_API_KEY` 与 `DEMO_ADMIN_TOKEN` 并点启动，我即可做公网验收。
 
-唯一剩余阻塞：需要一台可用的 Linux 主机。可选路径：
-
-1. **Oracle Cloud Always Free**：`VM.Standard.A1.Flex`，2 OCPU / 12 GB，Ubuntu 24.04，免费额度内 $0；注册需实名与支付方式验证（账户持有人操作）。
-2. 任何已有的免费/闲置 VPS（给出 IP 与 SSH 访问方式即可）。
-3. 若最终无法获得免费主机，则本轮无法交付公网链接——不会用隧道或临时预览冒充。
-
-拿到主机后执行：
-
-```bash
-git clone https://github.com/9mc79r92fj-wq/QueryForge.git /opt/queryforge
-cd /opt/queryforge && bash scripts/deploy_demo.sh
-```
-
-随后按 `docs/DEPLOYMENT.md` 的免费 ARM64 一节完成 `.env.demo`、语料、HTTPS 与验证。
-
-以下是拿到主机后的原始部署清单（保留供参考）。
+备选方案（若改用自有 Linux 主机）：仍可使用 Compose 部署，物料为 `scripts/deploy_demo.sh`、`deploy/Caddyfile` 与 `docs/DEPLOYMENT.md` 的"免费 ARM64 单机"一节。以下清单保留供参考。
 
 ```bash
 # 0) 本机准备发布包（排除环境文件、数据卷、恢复点）
