@@ -1,0 +1,33 @@
+{
+  "elapsed_seconds": 44.295,
+  "workloads": {
+    "search_hot": {
+      "requests": 2104,
+      "successful_requests": 2104,
+      "success_rate": 1.0,
+      "successful_qps": 47.5,
+      "p50_success_ms": 50.687,
+      "p95_success_ms": 62.493,
+      "p99_success_ms": 77.299,
+      "cache_hit_rate": 1.0,
+      "degraded": 0,
+      "status_codes": {
+        "200": 2104
+      }
+    },
+    "search_cold": {
+      "requests": 501,
+      "successful_requests": 501,
+      "success_rate": 1.0,
+      "successful_qps": 11.311,
+      "p50_success_ms": 70.237,
+      "p95_success_ms": 91.957,
+      "p99_success_ms": 243.24,
+      "cache_hit_rate": 0.0,
+      "degraded": 0,
+      "status_codes": {
+        "200": 501
+      }
+    }
+  }
+}

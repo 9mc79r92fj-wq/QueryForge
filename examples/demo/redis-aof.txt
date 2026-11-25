@@ -1,0 +1,5 @@
+QueryForge 公开演示知识库 · Redis AOF
+
+Redis 的 AOF（Append Only File）记录会改变数据集的命令。实例启动时，可以通过重放 AOF 恢复数据。配置 appendonly yes 启用 AOF。appendfsync everysec 通常每秒发起一次同步，异常关机时仍可能丢失最近的写入。
+
+AOF 重写生成能够重建当前状态的更精简文件，降低旧命令持续累积带来的空间使用。RDB 则是在特定时间生成数据集快照。备份应定期验证，持久化也应结合业务恢复目标设定。

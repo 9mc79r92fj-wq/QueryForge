@@ -1,0 +1,11 @@
+Celery 异步任务机制
+
+Celery 是 Python 生态常用的分布式任务队列。生产者把任务消息发送到 Broker（如 Redis、RabbitMQ），Worker 进程从队列取出消息并执行，执行结果可以写回 Result Backend。
+
+一次任务从调用 delay/apply_async 开始，消息进入队列后由 Worker 预取（prefetch）。默认每个 Worker 子进程会预取多条消息，长任务场景下应通过 worker_prefetch_multiplier 调低预取数量，避免任务在本地堆积而其他 Worker 空闲。
+
+任务通过 task_id 追踪，状态由后端保存。对入库这类耗时任务，应该显式声明软超时（soft_time_limit）与硬超时（time_limit），并在任务内部按阶段更新进度，便于前端展示。
+
+Celery 适合最终一致、可重试的后台工作，不适合强实时交互。生产环境还要考虑 Broker 持久化、Worker 并发模型（prefork、gevent、eventlet）和监控（Flower、Prometheus）。
+
+来源：https://docs.celeryq.dev/en/stable/userguide/tasks.html

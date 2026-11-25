@@ -1,0 +1,11 @@
+SSE 流式传输
+
+Server-Sent Events 使用 text/event-stream 响应，服务端持续写入以空行分隔的事件块，每个事件可以带 event、data、id、retry 字段。浏览器通过 EventSource 接收，或在前端用 fetch 读取流。
+
+SSE 是单向的（服务端到客户端），基于普通 HTTP，天然支持断线重连：客户端会带上 Last-Event-ID 重新连接，服务端可以据此续传。相比 WebSocket，SSE 更简单，适合模型逐字输出这类场景。
+
+工程上要处理缓冲：Nginx 需要 proxy_buffering off，避免响应被攒满才发出；还需要设置较长的读取超时，并定期发送注释行保活。
+
+流式输出与一致性需要配合：模型输出的临时片段可能被后续校验推翻。稳妥做法是先发草稿 delta，收到完整结果并校验引用后，再发 final 覆盖；连接中断或校验失败时前端必须清空草稿。
+
+来源：https://html.spec.whatwg.org/multipage/server-sent-events.html

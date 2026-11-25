@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-prefix" content="%%API_PREFIX%%">
+  <meta name="theme-color" content="#112c28">
+  <link rel="stylesheet" href="/assets/workbench.css">
+  <script src="/assets/workbench.js" defer></script>
+  <title>QueryForge · 知识库工作台</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主内容</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview"><span class="brand-mark" aria-hidden="true">Q</span><span><strong>QueryForge</strong><small>知识库工作台</small></span></a>
+      <nav aria-label="工作台" id="navigation">
+        <a href="#overview" data-panel="overview"><span aria-hidden="true">▦</span>系统概览</a>
+        <a href="#search" data-panel="search"><span aria-hidden="true">⌕</span>检索实验室</a>
+        <a href="#chat" data-panel="chat"><span aria-hidden="true">▤</span>RAG 问答</a>
+        <a href="#documents" data-panel="documents"><span aria-hidden="true">▱</span>知识库管理</a>
+        <a href="#tools" data-panel="tools"><span aria-hidden="true">◇</span>工具与 MCP</a>
+        <a href="#experiments" data-panel="experiments"><span aria-hidden="true">▥</span>实验评估</a>
+      </nav>
+      <div class="sidebar-footer"><span class="dot" id="sidebar-dot"></span><span id="sidebar-health">连接后端</span></div>
+    </aside>
+    <main id="main">
+      <header class="topbar"><span id="location">系统概览</span><span class="mode" id="run-mode">读取运行模式</span></header>
+      <div class="workspace">
+        <section id="overview" aria-labelledby="overview-title">
+          <div class="hero">
+            <p class="eyebrow">异步 RAG · 混合检索</p>
+            <h1 id="overview-title">企业知识库检索工作台</h1>
+            <p>从异步文档入库，到可追溯的检索与问答。直接观察 QueryForge 的实时索引、召回策略及运行状态。</p>
+            <a class="button hero-button" href="#search">进入检索实验室</a>
+          </div>
+          <div class="snapshot" aria-label="实时索引状态">
+            <div><span>服务就绪</span><strong id="ready-value">—</strong></div>
+            <div><span>索引修订版</span><strong id="revision-value">—</strong></div>
+            <div><span>可见文档版本</span><strong id="versions-value">—</strong></div>
+            <div><span>请求并发上限</span><strong id="concurrency-value">—</strong></div>
+          </div>
+          <div class="overview-grid">
+            <article class="card">
+              <div class="card-heading"><div><h2>服务架构</h2><p>从文档上传到索引发布</p></div></div>
+              <ol class="architecture">
+                <li><strong>FastAPI</strong><small>文档校验与任务登记</small></li>
+                <li><strong>Celery + Redis</strong><small>队列、重试与补偿</small></li>
+                <li><strong>SQLite + Qdrant</strong><small>版本快照与向量索引</small></li>
+              </ol>
+              <p class="caption">检索按同一索引快照并行召回，Redis 缓存随修订版变化。</p>
+            </article>
+            <article class="card">
+              <div class="card-heading"><div><h2>实时依赖</h2><p>来自就绪探测</p></div><button class="secondary" id="refresh-status">刷新</button></div>
+              <dl class="status-list" id="dependencies"></dl>
+              <p class="caption" id="limits"></p>
+            </article>
+          </div>
+          <article class="card reliability">
+            <div class="card-heading"><div><h2>系统可靠性</h2><p>异步状态与故障边界</p></div></div>
+            <div class="reliability-items">
+              <div><strong>任务恢复</strong><p>SQLite 记录阶段和执行次数，文件锁保护重复投递。过期任务由恢复命令补发。</p></div>
+              <div><strong>过载保护</strong><p>达到请求速率或并发限制时，API 返回 429 或 503，并给出重试时间。</p></div>
+              <div><strong>检索降级</strong><p>部分检索路径失败时，结果会标记实际召回方式、降级状态和原因。</p></div>
+            </div>
+          </article>
+        </section>
+
+        <section id="search" aria-labelledby="search-title" hidden>
+          <div class="section-heading"><h1 id="search-title">检索实验室</h1><p>Dense 为默认快速策略；Adaptive 由查询路由器按问题类型调整 BM25 与 Dense 的融合权重。</p></div>
+          <article class="card">
+            <form id="search-form">
+              <label for="search-query">检索查询</label>
+              <div class="query-row"><input id="search-query" name="query" maxlength="2000" required placeholder="例如 Redis AOF 如何恢复数据？"><button type="submit">运行检索</button></div>
+              <div class="form-options">
+                <label>召回策略<select name="mode"><option value="dense" selected>Dense</option><option value="adaptive">Adaptive</option><option value="hybrid">Hybrid</option><option value="bm25">BM25</option></select></label>
+                <label>Top-K<input name="top_k" type="number" min="1" max="50" value="5" required></label>
+                <label class="check"><input name="rerank" type="checkbox"> BGE Reranker</label>
+              </div>
+            </form>
+          </article>
+          <p id="search-state" class="notice" role="status">等待检索。</p>
+          <div id="search-metrics" class="metrics"></div>
+          <div id="search-results" class="results"></div>
+        </section>
+
+        <section id="chat" aria-labelledby="chat-title" hidden>
+          <div class="section-heading heading-action"><div><h1 id="chat-title">RAG 问答</h1><p>从知识库检索证据，查看最终答案与引用。</p></div><button class="secondary" id="reset-chat">新会话</button></div>
+          <article class="card">
+            <form id="chat-form">
+              <label for="chat-query">向知识库提问</label>
+              <textarea id="chat-query" name="query" rows="3" maxlength="2000" required placeholder="输入问题或基于上一轮追问"></textarea>
+              <div class="actions"><button type="submit">发送问题</button><button id="cancel-chat" type="button" class="secondary" disabled>停止</button><label class="check"><input name="stream" type="checkbox" checked> 流式输出</label></div>
+            </form>
+          </article>
+          <p class="notice" id="chat-state" role="status">读取问答可用性。</p>
+          <div id="conversation" class="results" aria-label="对话记录"></div>
+        </section>
+
+        <section id="documents" aria-labelledby="documents-title" hidden>
+          <div class="section-heading"><h1 id="documents-title">知识库管理</h1><p>上传 PDF 或 TXT，并跟踪每个版本的异步处理进度。</p></div>
+          <article class="card">
+            <label id="admin-field" hidden>管理员令牌<input id="admin-token" type="password" autocomplete="off" maxlength="256" placeholder="仅在本次页面使用"></label>
+            <form id="upload-form">
+              <div class="upload-fields">
+                <label>文档<input name="file" type="file" accept=".pdf,.txt" required></label>
+                <label>现有文档 ID（更新版本时填写）<input name="document_id" maxlength="36" placeholder="留空时创建新文档"></label>
+              </div>
+              <div class="actions"><button type="submit">提交入库</button><button id="refresh-documents" type="button" class="secondary">刷新版本</button></div>
+            </form>
+          </article>
+          <p class="notice" id="document-state" role="status"></p>
+          <div id="document-task"></div>
+          <div class="card table-card" id="document-list" hidden></div>
+          <div class="actions" id="document-pagination" hidden><button id="previous-documents" class="secondary">上一页</button><button id="next-documents" class="secondary">下一页</button></div>
+        </section>
+
+        <section id="tools" aria-labelledby="tools-title" hidden>
+          <div class="section-heading"><h1 id="tools-title">Function Calling 与 MCP</h1><p>查看模型发起的工具调用、执行耗时与证据。</p></div>
+          <article class="card">
+            <form id="tool-form"><label for="tool-query">工具问答</label><div class="query-row"><input id="tool-query" name="query" maxlength="2000" required placeholder="例如搜索 Redis 持久化文档，并核对文档版本"><button type="submit">运行工具问答</button></div></form>
+          </article>
+          <p class="notice" id="tool-state" role="status"></p>
+          <div id="tool-results" class="results"></div>
+          <article class="card mcp">
+            <h2>本地 MCP 接入</h2>
+            <p><code>search_knowledge</code> 返回检索片段与索引修订版。<code>get_document_metadata</code> 按文档 ID 查询当前可见版本。</p>
+            <p>通过 stdio 启动 MCP 实例。客户端需与本地 QueryForge 使用同一工作目录及依赖配置。</p>
+            <pre>python -m app.mcp_server</pre>
+            <p>使用 Compose 运行服务时，可执行 <code>python scripts/mcp_smoke.py</code> 验证协议和工具调用。</p>
+          </article>
+        </section>
+
+        <section id="experiments" aria-labelledby="experiments-title" hidden>
+          <div class="section-heading"><h1 id="experiments-title">实验评估</h1><p>历史归档。数据来自已保存的实验报告。</p></div>
+          <p class="notice" id="experiment-state" role="status"></p>
+          <article class="card table-card"><h2>检索消融 · T2Retrieval</h2><p id="benchmark-caption"></p><div id="benchmark-results"></div><p class="caption">语料含所选查询的相关文档。样本规模有限，P95 反映当时单机条件；这些查询仅用于描述该次实验。</p></article>
+          <article class="card table-card"><h2>Locust · 100 用户</h2><div id="load-results"></div><p class="caption">单机合成检索流量约 80% 为热点请求。限流配置与知识库不同的运行需分别解读。所有压测均不包含模型生成。</p></article>
+          <article class="card"><h2>自动化测试覆盖率</h2><p id="coverage-results">读取归档。</p></article>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

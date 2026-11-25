@@ -1,0 +1,11 @@
+Celery 消息确认与重试
+
+Celery 默认在任务执行前就确认（ack）消息：Worker 收到消息即从队列移除，进程崩溃时任务会丢失。需要至少一次投递时应开启 acks_late=True，让消息在任务成功后才被确认，失败或 Worker 掉线时由 Broker 重新投递。
+
+重投递依赖 Broker 的可见性超时。Redis 作为 Broker 时要注意 visibility_timeout 必须大于最长任务执行时间，否则执行中的任务会被重复投递。配合 task_reject_on_worker_lost=True，可以让 Worker 异常退出时的任务重新入队。
+
+自动重试通过 self.retry() 实现，可以指定 countdown 做指数退避，并设置 max_retries 上限。重试必须与幂等配合，否则重复执行会产生重复数据。
+
+本项目的入库任务使用 late ack、可恢复阶段、文件互斥锁、指数退避和持久化的执行次数上限；超过上限后任务进入 failed 终态，由补偿命令或人工介入，而不是无限重试。
+
+来源：https://docs.celeryq.dev/en/stable/userguide/tasks.html#task-options
