@@ -184,7 +184,7 @@ Celery Worker ← Redis（队列、版本化检索缓存、多轮会话）→ Qd
 
 原始项目 `XI0ZI123/QueryForge` 仍返回 404，未做任何推送或改写。旧密钥所在的历史提交只存在于本机原始项目，不随发布仓库外传。
 
-## 9. 部署状态：待部署（ModelScope Docker 创空间，卡在账户实名）
+## 9. 部署准备（历史记录，最终部署结果见第 15 节）
 
 GitHub 侧已完成；**公网地址仍未产生**。部署目标已改为 ModelScope Docker 创空间（国内直连、免费 CPU），但平台要求创空间所有者完成**实名认证 + 绑定阿里云账号**，且创建创空间只能在其网页控制台操作，因此这一步必须由账户持有人完成。
 
@@ -289,7 +289,38 @@ CSS 含 `@media` 断点（侧边栏折叠、表格横向滚动），但本轮没
 5. 域名与 DNS（可选，但正式演示建议绑定域名以获得稳定 HTTPS 地址）。
 6. 真机访问验收（手机/iPad）。
 
-## 15. 简历项目描述（基于真实数据）
+## 15. 公网部署（ModelScope Docker 创空间，已上线）
+
+2026-11-25 完成首次真实公网部署，地址：**https://luis123xi394-queryforge.ms.show**
+
+| 项 | 实际值 |
+|---|---|
+| 平台 | ModelScope 魔搭社区 · Docker 创空间 |
+| 规格 | `platform/2v-cpu-8g-mem`（2 vCPU / 8 GB，免费按需分配，cn-beijing） |
+| 架构 | 单容器 + supervisord：FastAPI(:7860) + Celery + Redis(127.0.0.1) + Qdrant(127.0.0.1) |
+| 访问 | 公开可访问，无需登录；国内直连 |
+| 费用 | 0 元（未购买任何资源） |
+| 数据 | SQLite/上传件在容器盘；模型缓存、公开版本白名单、5 分钟快照在 `/mnt/workspace/qf` |
+
+公网实测（2026-11-25 19:43–20:10，真实 HTTP 请求，非本地回放）：
+
+| 项目 | 结果 |
+|---|---|
+| 首页 / CSS / JS | 200（10570 / 9269 / 22813 字节） |
+| `/api/v1/ready` | `run_mode=demo`，`visible_versions=17`，`chat_enabled=true`，`tool_chat_enabled=false` |
+| 匿名检索 | BM25 581.8 ms、Dense 257.3 ms、Hybrid 299.2 ms、Adaptive 353.9 ms（2 vCPU 实测，非本地数据） |
+| 四种策略首条结果 | 均为 `cache-failure-modes.txt` |
+| 真实 RAG（非流式） | `refused=false`，引用 `cache-failure-modes.txt`，答案正确 |
+| SSE | 141 个事件，`ttft_ms=399.595`，`usage={input:1510, output:138, total:1648}`，引用 `hnsw-index.txt` |
+| 多轮会话 | `session_id` 复用成功（该追问因证据不足被拒答，符合校验逻辑） |
+| 实验数据接口 | `/api/v1/system/experiments` 200，含 benchmark / users_100 / protected_100 / coverage |
+| 演示权限 | `/docs` 404、`/openapi.json` 404、匿名上传 401、文档列表 401、工具问答 403 |
+
+已知偏差：演示语料 19 篇中 2 篇（`bm25.txt`、`adaptive-hybrid-retrieval.txt`）在首启入库时失败，当前可见 17 篇；其余 17 篇检索与引用正常。原因是首次启动时维护进程的打包快照与入库并发，属于部署脚本需要加固的部分，不影响已上线功能。
+
+
+
+## 16. 简历项目描述（基于真实数据）
 
 > **QueryForge｜企业知识库高可靠异步 RAG 后端与自适应混合检索引擎**（Python 3.11 / FastAPI / Celery / Redis / Qdrant / Docker）
 >
