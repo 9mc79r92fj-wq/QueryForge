@@ -31,7 +31,8 @@ ENV PYTHONUNBUFFERED=1 \
     MAX_CONCURRENT_REQUESTS=8 \
     RETRIEVAL_WORKERS=2 \
     RETRIEVAL_MAX_PENDING=8 \
-    CSP_FRAME_ANCESTORS="https://www.modelscope.cn https://modelscope.cn"
+    CSP_FRAME_ANCESTORS="https://www.modelscope.cn https://modelscope.cn" \
+    BUILD_REVISION="ms-csp-20261125"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

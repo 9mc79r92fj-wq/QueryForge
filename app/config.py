@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     app_name: str = "QueryForge"
     app_version: str = "1.0.0"
+    build_revision: str = ""
     api_prefix: str = "/api/v1"
     debug: bool = False
     run_mode: Literal["local", "demo"] = "local"
