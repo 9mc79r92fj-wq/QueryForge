@@ -1,6 +1,6 @@
 # QueryForge 最终交付报告
 
-交付日期：2026-11-25。本轮在本地真实环境完成代码复验、演示语料建设、安全检查与**真实 DeepSeek 端到端验收**。**公网部署与 GitHub CI 两项因缺少外部条件（服务器、仓库权限）尚未完成**，本文逐项标注"已验证 / 未验证 / 待部署"，不把未验证项写成通过。
+交付日期：2026-11-25。本轮在本地真实环境完成代码复验、演示语料建设、安全检查、**真实 DeepSeek 端到端验收**，并在干净发布版本中完成 GitHub 私有仓库推送与 CI 验收。**公网部署仍因缺少可用云主机而未完成**，本文逐项标注"已验证 / 未验证 / 待部署"，不把未验证项写成通过。
 
 ## 1. 项目定位
 
@@ -171,20 +171,49 @@ Celery Worker ← Redis（队列、版本化检索缓存、多轮会话）→ Qd
 
 ## 8. GitHub 与 CI
 
-- `origin = https://github.com/XI0ZI123/QueryForge.git`
-- `git ls-remote origin` 返回 `remote: Repository not found`（404），与审计记录一致。
-- 本地 `gh` CLI 未安装，凭据管理器为 `manager`。
-- 因此 **远程 CI 未验收**，本轮不能声称 GitHub Actions 已通过。
+本轮已在干净发布版本中建立独立仓库并完成首次推送，**不含原始项目的历史与凭据**。
 
-需要用户完成：确认仓库是否存在/是否私有、账号是否有权限、凭据是否过期。仓库可用后：
+| 项 | 实际值 |
+|---|---|
+| 仓库 | `https://github.com/9mc79r92fj-wq/QueryForge`（私有） |
+| 分支 | `main`，提交 `d2ff9de`（远程与本地一致） |
+| 工作流 | `QueryForge CI`（`.github/workflows/ci.yml`） |
+| 运行记录 | [run #1](https://github.com/9mc79r92fj-wq/QueryForge/actions/runs/45592595376) |
+| 结果 | **success**，耗时 1 分 57 秒 |
+| 步骤 | Checkout / setup-python 3.11 / 安装依赖 / `pip check` / `compileall` / `pytest --cov` 全部 success |
 
-```powershell
-git push origin main   # 先完成第 7 节的密钥处理
+原始项目 `XI0ZI123/QueryForge` 仍返回 404，未做任何推送或改写。旧密钥所在的历史提交只存在于本机原始项目，不随发布仓库外传。
+
+## 9. 部署状态：待部署（免费实例需账户持有人开户）
+
+GitHub 侧已完成；**云主机尚未获得，因此仍没有公网地址**。原因不是代码或配置，而是所有免费云方案都要求账户持有人完成注册、实名与支付方式验证：本机没有 Oracle/AWS/腾讯云 CLI 或凭据，也没有任何 SSH 密钥或既有主机。
+
+已完成可直接执行的部署物料（本轮新增）：
+
+| 文件 | 作用 |
+|---|---|
+| `scripts/deploy_demo.sh` | 一键生成 `.env.demo`（含随机管理员令牌）、校验 Compose、构建镜像、启动并等待就绪；`--seed` 可一次性入库 20 篇演示语料 |
+| `deploy/Caddyfile` | 通过 `<公网IP>.sslip.io` 自动申请 Let's Encrypt 证书，关闭 SSE 缓冲、限制上传 21 MB、附加 HSTS 等安全头 |
+| `docs/DEPLOYMENT.md` | 新增"免费 ARM64 单机（Oracle Cloud Always Free）"整节，含 2 vCPU 参数收敛与验证清单 |
+
+ARM64 可行性已按 `constraints.txt` 逐个核对 PyPI：106 个锁定包中 29 个提供 aarch64 wheel、76 个纯 Python、`jieba` 仅源码包但为纯 Python；Qdrant/Redis 官方镜像均有 arm64 版本，无需改 Dockerfile。
+
+唯一剩余阻塞：需要一台可用的 Linux 主机。可选路径：
+
+1. **Oracle Cloud Always Free**：`VM.Standard.A1.Flex`，2 OCPU / 12 GB，Ubuntu 24.04，免费额度内 $0；注册需实名与支付方式验证（账户持有人操作）。
+2. 任何已有的免费/闲置 VPS（给出 IP 与 SSH 访问方式即可）。
+3. 若最终无法获得免费主机，则本轮无法交付公网链接——不会用隧道或临时预览冒充。
+
+拿到主机后执行：
+
+```bash
+git clone https://github.com/9mc79r92fj-wq/QueryForge.git /opt/queryforge
+cd /opt/queryforge && bash scripts/deploy_demo.sh
 ```
 
-## 9. 部署状态：待部署（无公网地址）
+随后按 `docs/DEPLOYMENT.md` 的免费 ARM64 一节完成 `.env.demo`、语料、HTTPS 与验证。
 
-服务器未提供，**没有公网链接**，不会编造。以下是按现有 `docker-compose.yml` + `docker-compose.demo.yml` 整理的单机部署清单，拿到香港轻量服务器（建议 4C8G，SSD ≥ 60 GB）后逐条执行即可。
+以下是拿到主机后的原始部署清单（保留供参考）。
 
 ```bash
 # 0) 本机准备发布包（排除环境文件、数据卷、恢复点）
@@ -264,7 +293,7 @@ CSS 含 `@media` 断点（侧边栏折叠、表格横向滚动），但本轮没
 
 1. **撤销旧 DeepSeek 密钥**，并决定 Git 历史处理方式（见第 7 节）。新密钥已配置到本机 `.env`，旧钥仍需确认已在供应商侧撤销。
 2. ~~提供新密钥~~（已完成）：真实 RAG/SSE/Function Calling 验收见第 6 节。
-3. 确认 GitHub 仓库状态与访问权限；决定是否推送以及是否清理历史。
+3. ~~确认 GitHub 仓库状态与访问权限~~（已完成）：私有仓库已创建，`main` 已推送，CI 通过，见第 8 节。原始仓库 `XI0ZI123/QueryForge` 无需再处理。
 4. 提供香港服务器（或确认由你执行第 9 节命令）。
 5. 域名与 DNS（可选，但正式演示建议绑定域名以获得稳定 HTTPS 地址）。
 6. 真机访问验收（手机/iPad）。

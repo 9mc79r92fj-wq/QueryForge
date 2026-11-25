@@ -36,3 +36,53 @@ curl --fail http://127.0.0.1:8001/api/v1/ready
 保留前一次验收过的镜像、配置文件、副本数据卷和备份。API 发布问题优先切回前一版本镜像，再执行 docker compose up -d --no-build --wait。回滚配置时保留 API、Redis 和 Qdrant 的安全监听地址以及当前密钥撤销状态。回滚数据库只在确认写入窗口后操作。若历史备份包含较早的付费预算计数，先关闭付费问答，再核对供应商剩余额度。停止临时项目可用 docker compose stop。已有数据卷由对应项目继续管理。
 
 源码变更应用 git revert 逐个撤销已提交的修复。审计前恢复点包含 Git bundle、原始 Compose 文件、二进制 diff 和审计前未跟踪的测试样本。只在本机受控目录使用恢复点。
+
+## 免费 ARM64 单机（Oracle Cloud Always Free）
+
+目标形态：`VM.Standard.A1.Flex`，2 OCPU / 12 GB 内存，Ubuntu 24.04 LTS，引导卷 50–100 GB（在 Always Free 的 200 GB 总额度内），一块公网 IPv4。该规格足以同时运行 API、Worker、Redis、Qdrant 与两份 ONNX 模型；实测本地同规模空闲占用约 0.8 GB，BGE 推理峰值再增加约 1 GB。
+
+ARM64 依赖核查（2026-11-25，按 `constraints.txt` 的 106 个锁定包逐个查询 PyPI）：29 个直接提供 aarch64 wheel，76 个为纯 Python，`jieba` 只有源码包但本身是纯 Python，可正常安装。Qdrant 与 Redis 官方镜像均发布 linux/arm64。因此无需改写 Dockerfile 或依赖。
+
+```bash
+# 1) 主机准备
+sudo apt update && sudo apt install -y ca-certificates curl python3
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"    # 重新登录生效
+docker compose version             # 需 >= 2.24.4
+
+# 2) 代码与配置
+git clone https://github.com/<owner>/QueryForge.git /opt/queryforge
+cd /opt/queryforge
+bash scripts/deploy_demo.sh        # 生成 .env.demo、建镜像、启动并等待就绪
+
+# 3) 演示语料（使用 20 篇公开文档）
+gedit .env.demo                    # 填入 LLM_API_KEY 与 DEMO_LLM_TOTAL_CALLS
+bash scripts/deploy_demo.sh --seed # 输出 20 个 version_id
+# 将 version_id 写入 .env.demo 的 DEMO_PUBLIC_VERSION_IDS，然后重建 API
+docker compose --env-file .env.demo -f docker-compose.yml -f docker-compose.demo.yml \
+  up -d --no-deps --force-recreate api
+
+# 4) HTTPS（无需购买域名）：公网 IP 的 sslip.io 名称
+sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt update && sudo apt install -y caddy
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo sed -i 's/{\$QF_DOMAIN}/<public-ip>.sslip.io/; s/{\$QF_ACME_EMAIL}/admin@example.com/' /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+2 vCPU 实例建议在 `.env.demo` 收敛以下参数（默认值面向本机 8 核）：
+
+```text
+MAX_CONCURRENT_REQUESTS=8
+RETRIEVAL_WORKERS=2
+RETRIEVAL_MAX_PENDING=8
+CHAT_REQUESTS_PER_MINUTE=6
+API_REQUESTS_PER_MINUTE=300
+DEMO_LLM_TOTAL_CALLS=200
+```
+
+注意：Oracle 的 Always Free 实例可能因账户闲置策略被回收，需按账户邮件保持活跃；免费容量按区域动态供应，创建失败属于容量问题而非配置问题；注册需要账户持有人完成实名与支付方式验证，无法由脚本代办。
+
+上线后按"发布前检查"一节逐项验证：`/api/v1/ready`、匿名检索、匿名上传 401、`/docs` 404、HTTPS 证书、SSE 不被缓冲、重启后数据卷仍在。

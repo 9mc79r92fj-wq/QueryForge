@@ -1,0 +1,42 @@
+# Public HTTPS entry for the QueryForge demo stack.
+#
+# Set QF_DOMAIN to a DNS name that resolves to this host. A free option that
+# needs no domain purchase is <public-ip>.sslip.io (for example
+# 140.238.12.34.sslip.io); Caddy obtains a Let's Encrypt certificate over
+# HTTP-01 automatically and renews it before expiry.
+#
+# Run: QF_DOMAIN=... QF_ACME_EMAIL=... caddy run --config deploy/Caddyfile
+
+{
+	admin off
+	email {$QF_ACME_EMAIL}
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$QF_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# Keep in sync with MAX_UPLOAD_MB in .env.demo (20 MiB plus form overhead).
+	request_body {
+		max_size 21MB
+	}
+
+	# SSE: flush every event immediately and allow long model calls.
+	reverse_proxy 127.0.0.1:8001 {
+		flush_interval -1
+		transport http {
+			response_header_timeout 300s
+			read_timeout 300s
+		}
+	}
+}
