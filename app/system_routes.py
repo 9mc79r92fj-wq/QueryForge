@@ -114,8 +114,9 @@ def web_home() -> HTMLResponse:
         headers={
             "Content-Security-Policy": (
                 "default-src 'none'; script-src 'self'; style-src 'self'; "
-                "img-src 'self'; connect-src 'self'; frame-ancestors 'none'; "
-                "base-uri 'none'; form-action 'self'"
+                "img-src 'self'; connect-src 'self'; base-uri 'none'; "
+                "form-action 'self'; frame-ancestors "
+                f"{settings.csp_frame_ancestors}"
             ),
             "Referrer-Policy": "no-referrer",
         }

@@ -30,7 +30,8 @@ ENV PYTHONUNBUFFERED=1 \
     CHAT_REQUESTS_PER_MINUTE=6 \
     MAX_CONCURRENT_REQUESTS=8 \
     RETRIEVAL_WORKERS=2 \
-    RETRIEVAL_MAX_PENDING=8
+    RETRIEVAL_MAX_PENDING=8 \
+    CSP_FRAME_ANCESTORS="https://www.modelscope.cn https://modelscope.cn"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

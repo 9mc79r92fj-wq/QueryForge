@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr = SecretStr("")
 
     max_upload_mb: int = 20
+    csp_frame_ancestors: str = "'none'"
     chunk_size: int = 500
     chunk_overlap: int = 100
 

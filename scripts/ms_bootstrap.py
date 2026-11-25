@@ -48,6 +48,22 @@ def wait_task(client: httpx.Client, task_id: str, timeout: float = 600.0) -> str
     return "timeout"
 
 
+def upload(client: httpx.Client, name: str, data: bytes) -> dict:
+    response = client.post(
+        "/api/v1/documents/upload",
+        files={"file": (name, data, "text/plain")},
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def ingest(client: httpx.Client, path: Path) -> str | None:
+    body = upload(client, path.name, path.read_bytes())
+    status = wait_task(client, body["task_id"])
+    print(f"{path.name:38s} {status:10s} {body['version_id']}")
+    return body["version_id"] if status == "completed" else None
+
+
 def main() -> None:
     if not TOKEN:
         print("DEMO_ADMIN_TOKEN is empty; skipping corpus bootstrap")
@@ -72,32 +88,40 @@ def main() -> None:
     with httpx.Client(base_url=API, headers=headers, timeout=120.0) as client:
         wait_ready(client)
 
-        if len(existing) >= 15:
-            print(f"whitelist already has {len(existing)} versions; nothing to do")
-            return
-
         documents = sorted(KB_DIR.glob("*.txt"))
         if not documents:
             print(f"no corpus files under {KB_DIR}")
             return
 
+        if len(existing) >= len(documents):
+            print(f"whitelist already has {len(existing)} versions; nothing to do")
+            return
+
         published = list(existing)
 
         for path in documents:
-            with path.open("rb") as handle:
-                response = client.post(
-                    "/api/v1/documents/upload",
-                    files={"file": (path.name, handle, "text/plain")},
+
+            version_id = ingest(client, path)
+
+            if version_id is None:
+
+                print(
+                    f"retrying {path.name} with a new content hash",
+                    file=sys.stderr
                 )
-            response.raise_for_status()
-            body = response.json()
-            status = wait_task(client, body["task_id"])
-            print(f"{path.name:38s} {status:10s} {body['version_id']}")
-            if status != "completed":
-                print(f"ingestion failed for {path.name}", file=sys.stderr)
-                continue
-            if body["version_id"] not in published:
-                published.append(body["version_id"])
+
+                marked = path.read_bytes() + "\n\n（部署重试副本）\n".encode()
+
+                body = upload(client, path.name, marked)
+
+                status = wait_task(client, body["task_id"])
+
+                print(f"{path.name:38s} {status:10s} {body['version_id']} (retry)")
+
+                version_id = body["version_id"] if status == "completed" else None
+
+            if version_id is not None and version_id not in published:
+                published.append(version_id)
 
         temporary = target.with_suffix(".tmp")
         temporary.write_text(json.dumps(published, indent=2), encoding="utf-8")
