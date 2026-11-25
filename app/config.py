@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     run_mode: Literal["local", "demo"] = "local"
     demo_admin_token: SecretStr = SecretStr("")
     demo_public_version_ids: tuple[UUID, ...] = ()
+    demo_public_version_file: Path | None = None
     demo_rag_enabled: bool = False
     demo_llm_total_calls: int = Field(default=0, ge=0, le=10000)
     demo_secure_cookie: bool = True

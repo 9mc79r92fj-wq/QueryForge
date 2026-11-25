@@ -10,6 +10,7 @@ QueryForge 是面向企业知识库检索与问答的单机异步 RAG 后端。�
 | 部署与回滚 | [部署说明](docs/DEPLOYMENT.md) |
 | 测试与工程验收 | [工程审计](docs/ENGINEERING_AUDIT.md) |
 | 最终交付状态 | [交付报告](docs/FINAL_DELIVERY.md) |
+| ModelScope 创空间部署 | [魔搭部署说明](docs/MODELSCOPE.md) |
 
 ## 架构与技术栈
 
