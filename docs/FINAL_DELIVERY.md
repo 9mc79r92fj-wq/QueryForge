@@ -178,8 +178,8 @@ Celery Worker ← Redis（队列、版本化检索缓存、多轮会话）→ Qd
 | 仓库 | `https://github.com/9mc79r92fj-wq/QueryForge`（私有） |
 | 分支 | `main`，提交 `d2ff9de`（远程与本地一致） |
 | 工作流 | `QueryForge CI`（`.github/workflows/ci.yml`） |
-| 运行记录 | [run #1](https://github.com/9mc79r92fj-wq/QueryForge/actions/runs/45592595376) |
-| 结果 | **success**，耗时 1 分 57 秒 |
+| 运行记录 | [run #1](https://github.com/9mc79r92fj-wq/QueryForge/actions/runs/45592595376)（`d2ff9de`）、[run #2](https://github.com/9mc79r92fj-wq/QueryForge/actions/runs/45593352534)（`3ac6c60`） |
+| 结果 | 两次均 **success**，单次约 1 分 57 秒 |
 | 步骤 | Checkout / setup-python 3.11 / 安装依赖 / `pip check` / `compileall` / `pytest --cov` 全部 success |
 
 原始项目 `XI0ZI123/QueryForge` 仍返回 404，未做任何推送或改写。旧密钥所在的历史提交只存在于本机原始项目，不随发布仓库外传。
