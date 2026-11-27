@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     final_top_k: int = 5
     rrf_k: int = 60
 
+    router_mode: Literal["v1", "v2"] = "v2"
+    router_policy_path: Path | None = None
+
     request_timeout: float = 30.0
     max_retries: int = 3
     

@@ -29,7 +29,7 @@ from app.bm25_engine import get_bm25_index
 from app.dense_engine import dense_search
 from app.rrf import reciprocal_rank_fusion
 
-from app.query_router import route_query
+from app.query_router import route_query, route_query_v2, should_rerank
 from app.reranker import rerank_hits
 
 
@@ -98,6 +98,8 @@ def retrieve(
 
     query_type = None
     fusion_weights = None
+    decision_v2 = None
+    routing_summary = None
 
     score_type = "unknown"
 
@@ -233,16 +235,43 @@ def retrieve(
 
             if request.mode == SearchMode.ADAPTIVE:
 
-                decision = route_query(
-                    request.query
-                )
+                if settings.router_mode == "v2":
 
-                query_type = decision.query_type
+                    decision_v2 = route_query_v2(
+                        request.query,
+                        rerank_requested=request.rerank,
+                        policy_path=settings.router_policy_path
+                    )
 
-                weights = [
-                    decision.bm25_weight,
-                    decision.dense_weight
-                ]
+                    query_type = decision_v2.query_type
+
+                    weights = [
+                        decision_v2.bm25_weight,
+                        decision_v2.dense_weight
+                    ]
+
+                    routing_summary = {
+                        "version": decision_v2.version,
+                        "query_type": decision_v2.query_type,
+                        "strategy": decision_v2.strategy,
+                        "rerank_planned": decision_v2.rerank,
+                        "second_retrieval_planned": (
+                            decision_v2.second_retrieval
+                        ),
+                        "reason": decision_v2.reason,
+                        "features": decision_v2.features
+                    }
+
+                else:
+
+                    decision = route_query(request.query)
+
+                    query_type = decision.query_type
+
+                    weights = [
+                        decision.bm25_weight,
+                        decision.dense_weight
+                    ]
 
                 score_type = "weighted_rrf"
 
@@ -272,7 +301,27 @@ def retrieve(
 
             )
 
-    if request.rerank and hits:
+    rerank_allowed = bool(request.rerank and hits)
+
+    if rerank_allowed and decision_v2 is not None:
+
+        remaining_ms = max(
+            settings.retrieval_timeout * 1000
+            - (perf_counter() - started) * 1000,
+            0.0
+        )
+
+        rerank_allowed, rerank_reason = should_rerank(
+            decision_v2,
+            [hit.score for hit in hits],
+            latency_budget_ms=remaining_ms
+        )
+
+        if routing_summary is not None:
+            routing_summary["rerank_executed"] = rerank_allowed
+            routing_summary["rerank_reason"] = rerank_reason
+
+    if rerank_allowed:
 
         try:
 
@@ -339,6 +388,8 @@ def retrieve(
         rerank_applied=rerank_applied,
 
         score_type=score_type,
+
+        routing=routing_summary,
 
         warnings=warnings
 

@@ -149,6 +149,8 @@ class SearchResponse(BaseModel):
 
     score_type: str = "unknown"
 
+    routing: dict | None = None
+
     warnings: list[str] = Field(
         default_factory=list
     )
