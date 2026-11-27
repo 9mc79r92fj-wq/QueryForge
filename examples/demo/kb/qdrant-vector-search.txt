@@ -1,0 +1,11 @@
+Qdrant 向量检索
+
+Qdrant 是开源向量数据库，核心概念是 collection、point 与 payload。每个 point 包含 ID、向量和可选的 payload；payload 支持过滤条件，可以在向量检索时先按元数据缩小范围。
+
+创建 collection 时需要指定向量维度与距离函数（Cosine、Dot、Euclid）。距离函数必须与生成向量的模型匹配，维度不一致会直接写入失败。生产环境常给 document_id、version_id 之类的字段建立 payload 索引，让过滤走索引而不是全量扫描。
+
+写入使用 upsert，带相同 ID 的 point 会被覆盖，这为幂等重放提供了基础。可以按批写入并使用 wait=true 等待确认，再推进业务状态。
+
+检索接口支持 limit、score_threshold、filter 和 with_payload。对于多版本知识库，检索时用版本白名单过滤，保证不会返回未激活版本的内容。
+
+来源：https://qdrant.tech/documentation/concepts/

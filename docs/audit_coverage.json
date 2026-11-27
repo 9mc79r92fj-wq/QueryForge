@@ -1,0 +1,17 @@
+{
+  "tests": 123,
+  "coverage_percent": 83.94,
+  "covered_lines": 1720,
+  "statements": 2049,
+  "python": "3.11.18",
+  "platform": "Linux amd64 (Docker Desktop)",
+  "warnings": 2,
+  "baseline": {
+    "commit": "b29e3e959d329c9f7f0bfc05325a7780705e7320",
+    "tests": 108,
+    "coverage_percent": 69.05,
+    "covered_lines": 1196,
+    "statements": 1732,
+    "warnings": 2
+  }
+}

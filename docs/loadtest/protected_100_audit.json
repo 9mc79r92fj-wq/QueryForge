@@ -1,0 +1,67 @@
+{
+  "elapsed_seconds": 43.659,
+  "configuration": {
+    "server_runtime": "Docker Desktop Linux amd64, Py 3.11.18",
+    "duration_target_seconds": 45,
+    "docker_resources": "16 logical CPUs, 7899840512 bytes RAM",
+    "warmup": "All five hot queries primed",
+    "spawn_per_second": 10,
+    "api_per_minute": 600,
+    "concurrency": 24,
+    "processor": "AMD Ryzen 7 6800H with Radeon Graphics",
+    "users": 100,
+    "model": "BAAI/bge-small-zh-v1.5 CPU",
+    "dataset": "Three active versions from isolated sample TXT, PDF and recovery fixture",
+    "generator_runtime": "Python 3.14.10",
+    "chat_per_minute": 12
+  },
+  "scenario": {
+    "mode": "hybrid",
+    "top_k": 5,
+    "rerank": false,
+    "hot_task_weight": 4,
+    "cold_task_weight": 1,
+    "wait_seconds": [
+      0.5,
+      1.0
+    ],
+    "llm": false
+  },
+  "workloads": {
+    "search_hot": {
+      "requests": 3616,
+      "successful_requests": 964,
+      "success_rate": 0.2666,
+      "successful_qps": 22.08,
+      "p50_success_ms": 31.885,
+      "p95_success_ms": 162.734,
+      "p99_success_ms": 4151.887,
+      "cache_hit_rate": 1.0,
+      "degraded": 0,
+      "rate_limit_without_retry_after": 0,
+      "status_codes": {
+        "200": 964,
+        "503": 7,
+        "0": 2,
+        "429": 2643
+      }
+    },
+    "search_cold": {
+      "requests": 889,
+      "successful_requests": 231,
+      "success_rate": 0.2598,
+      "successful_qps": 5.291,
+      "p50_success_ms": 82.615,
+      "p95_success_ms": 321.822,
+      "p99_success_ms": 429.225,
+      "cache_hit_rate": 0.0,
+      "degraded": 0,
+      "rate_limit_without_retry_after": 0,
+      "status_codes": {
+        "200": 231,
+        "503": 2,
+        "429": 656
+      }
+    }
+  }
+}

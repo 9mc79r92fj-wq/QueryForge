@@ -1,0 +1,11 @@
+Model Context Protocol
+
+MCP 是面向模型应用的开放协议，用统一的客户端/服务端接口暴露工具、资源与提示模板。客户端（如 IDE 或 Agent 运行时）通过协议发现服务端能力，再按需调用。
+
+传输层支持 stdio 与 HTTP。stdio 适合本地进程：客户端拉起服务端进程，通过标准输入输出交换 JSON-RPC 消息；HTTP 适合远程共享服务。stdio 模式下服务端的日志必须写 stderr，否则会污染协议流。
+
+MCP 与 Function Calling 的区别在于层次：Function Calling 是模型与应用之间的调用约定，MCP 是应用与工具服务之间的标准化接口。两者可以组合——MCP 服务端把工具暴露给客户端，客户端再把工具注册给模型。
+
+本项目实现了一个独立 stdio MCP 服务端，暴露 search_knowledge 与 get_document_metadata 两个只读工具，并通过脚本完成真实握手、工具发现与调用验证。
+
+来源：https://modelcontextprotocol.io/docs/learn/architecture

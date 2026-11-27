@@ -1,0 +1,17 @@
+.git
+.env
+.env.*
+!.env.example
+!.env.demo.example
+data
+docs
+tests
+htmlcov
+.pytest_cache
+.venv
+.venv311
+**/__pycache__
+*.pyc
+*.db
+*.sqlite3
+recovery_test.txt

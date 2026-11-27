@@ -1,0 +1,16 @@
+name: queryforge-demo
+
+services:
+  api:
+    env_file: !override [.env.demo]
+    environment:
+      RUN_MODE: demo
+    ports: !override ["127.0.0.1:${DEMO_API_BIND_PORT:-8001}:8000"]
+  worker:
+    env_file: !override [.env.demo]
+    environment:
+      RUN_MODE: demo
+  redis:
+    ports: !reset []
+  qdrant:
+    ports: !reset []

@@ -1,0 +1,11 @@
+HNSW 索引
+
+HNSW（Hierarchical Navigable Small World）是目前主流的近似最近邻图索引。它把向量组织成多层图：上层稀疏、用于快速跳转，底层密集、包含全部节点，查询从顶层贪心下降到目标区域，再在底层做局部搜索。
+
+影响召回率与延迟的主要参数是 M（每层连边数）和 ef_construct（建图时候选队列大小），查询时用 ef_search 控制搜索广度。M 越大图越稠密，召回更高但内存和构建成本上升；ef_search 越大召回越高、延迟越高。
+
+HNSW 的取舍是拿少量召回损失换取数量级的延迟下降。对于百万级向量需要评估内存占用，必要时使用量化或磁盘存储。
+
+Qdrant 默认使用 HNSW，并通过 hnsw_config 暴露上述参数。选择参数时应以真实数据集上的 Recall@K 与 P95 延迟为目标，而不是照搬默认值。
+
+来源：https://qdrant.tech/documentation/concepts/indexing/
